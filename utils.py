@@ -20,25 +20,28 @@ def save2npz(filename, data=None):
     np.savez_compressed(filename, data=data)
 
 
-def load_video(filename, display=False):
+def load_video(filename, verbose=False):
     cap = cv2.VideoCapture(filename)
+   
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
+
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if verbose:
+        print(
+            f'Filename: {filename}, Length: {length}, Width: {width}, Height: {height}, FPS: {fps}')
 
     while cap.isOpened():
         # BGR
         ret, frame = cap.read()
-        # FPS = 1 / desired FPS
-        FPS = 1 / 60
-        FPS_MS = int(FPS * 1000)
 
         if ret:
-            if display:
-                cv2.imshow("Frame", frame)
-                cv2.waitKey(FPS_MS)
-                if cv2.waitKey(delay=1) == 27:
-                    break
-            yield frame
+            yield frame, length
         else:
             break
+
     cap.release()

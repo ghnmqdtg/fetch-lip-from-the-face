@@ -32,18 +32,20 @@ class DictX(dict):
         return '<DictX ' + dict.__repr__(self) + '>'
 
 
-def detect_face(filename, display=False):
+def detect_face(filename, verbose=False):
     frame_idx = 0
     # Generator object
-    frame_gen = utils.load_video(filename, display)
+    frame_gen = utils.load_video(filename, verbose)
+
     # Load the detector for detecting the face
     detector = dlib.get_frontal_face_detector()
     predictor = dlib.shape_predictor(args.predictor)
     mean_face = np.load(args.mean_face)
+
     while True:
         try:
             # BGR, numpy array
-            frame = frame_gen.__next__()
+            frame, frame_amount = frame_gen.__next__()
         except StopIteration:
             break
 
@@ -100,7 +102,7 @@ def detect_face(filename, display=False):
             # ))
             # cv2.waitKey(int(1 / 60 * 1000))
 
-        if frame_idx == len(landmarks) - 1:
+        if frame_idx == frame_amount - 1:
             while q_frame:
                 cur_frame = q_frame.popleft()
                 # Transform frame
@@ -116,7 +118,6 @@ def detect_face(filename, display=False):
                     args.crop_height // 2
                 ))
 
-            # print(frame_idx, len(sequence))
             return np.array(sequence)
 
         frame_idx += 1
@@ -186,7 +187,7 @@ if __name__ == '__main__':
         src_path = os.path.join(args.video_direc, filename + ".mp4")
         dst_path = os.path.join(args.save_direc, filename + ".npz")
 
-        sequence = detect_face(src_path)
+        sequence = detect_face(src_path, verbose=True)
         
         assert sequence is not None, f'Cannot crop from {src_path}.'
         # print(sequence.shape)
