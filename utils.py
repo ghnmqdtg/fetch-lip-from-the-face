@@ -32,8 +32,7 @@ def load_video(filename, verbose=False):
     fps = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
     if verbose:
-        print(
-            f'Filename: {filename}, Length: {length}, Width: {width}, Height: {height}, FPS: {fps}')
+        print(f'Filename: {filename}, Length: {length}, Width: {width}, Height: {height}, FPS: {fps}')
 
     while cap.isOpened():
         # BGR
@@ -45,3 +44,8 @@ def load_video(filename, verbose=False):
             break
 
     cap.release()
+
+
+def create_path(path):
+    if not os.path.exists(path):
+        os.makedirs(path)

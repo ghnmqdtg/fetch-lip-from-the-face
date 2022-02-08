@@ -121,7 +121,7 @@ def detect_face(filename, verbose=False):
             return np.array(sequence)
 
         frame_idx += 1
-        # print(frame_idx, len(sequence), len(landmarks))
+
     return None
 
 
@@ -177,22 +177,31 @@ if __name__ == '__main__':
         "testset_only": False
     })
 
-    filenames = []
+    foldernames = []
 
     for root, dirs, files in os.walk(args.video_direc):
-        filenames = sorted(file.split(".")[0] for file in list(
-            filter(lambda x: x != ".DS_Store", files)))
+        if len(dirs) > 0:
+            foldernames = sorted(dirs)
     
-    for filename in tqdm(filenames, bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
-        src_path = os.path.join(args.video_direc, filename + ".mp4")
-        dst_path = os.path.join(args.save_direc, filename + ".npz")
+    for folder in tqdm(foldernames, desc='Folder', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
+        # Check if dst folder exists
+        utils.create_path(f'{args.save_direc}/{folder}')
 
-        sequence = detect_face(src_path, verbose=True)
-        
-        assert sequence is not None, f'Cannot crop from {src_path}.'
-        # print(sequence.shape)
-        # ... = Ellipsis
-        data = transform.convert_bgr2gray(
-            sequence) if args.convert_gray else sequence[..., ::-1]
-        
-        utils.save2npz(dst_path, data=data)
+        filenames = []
+        for root, dirs, files in os.walk(f'{args.video_direc}/{folder}'):
+            filenames = sorted(file.split(".")[0] for file in list(
+                filter(lambda x: x != ".DS_Store", files)))
+
+            for filename in tqdm(filenames, desc='Files ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
+                src_path = os.path.join(f'{args.video_direc}/{folder}', filename + ".mp4")
+                dst_path = os.path.join(f'{args.save_direc}/{folder}', filename + ".npz")
+
+                sequence = detect_face(src_path, verbose=False)
+                
+                assert sequence is not None, f'Cannot crop from {src_path}.'
+                # print(sequence.shape)
+                # ... = Ellipsis
+                data = transform.convert_bgr2gray(
+                    sequence) if args.convert_gray else sequence[..., ::-1]
+                
+                utils.save2npz(dst_path, data=data)
