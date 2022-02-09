@@ -22,14 +22,14 @@ def save2npz(filename, data=None):
 
 def load_video(filename, verbose=False):
     cap = cv2.VideoCapture(filename)
-   
+
     if not cap.isOpened():
         raise IOError("Cannot open webcam")
 
     length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    fps = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
 
     if verbose:
         print(f'Filename: {filename}, Length: {length}, Width: {width}, Height: {height}, FPS: {fps}')
@@ -44,6 +44,21 @@ def load_video(filename, verbose=False):
             break
 
     cap.release()
+
+
+def check_video_length(filename, verbose=False):
+    cap = cv2.VideoCapture(filename)
+
+    if not cap.isOpened():
+        raise IOError("Cannot open webcam")
+
+    length = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    fps = int(cap.get(cv2.CAP_PROP_FPS))
+
+    if verbose:
+        print(f'Filename: {filename}, Length: {length}, Width: {width}, Height: {height}, FPS: {fps}')
 
 
 def create_path(path):

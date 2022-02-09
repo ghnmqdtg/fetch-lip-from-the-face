@@ -8,8 +8,7 @@ import argparse
 from imutils.face_utils.helpers import FACIAL_LANDMARKS_IDXS
 from imutils.face_utils.helpers import shape_to_np
 
-import utils
-import transform
+from utils import utils, transform
 
 
 class DictX(dict):
@@ -118,6 +117,7 @@ def detect_face(filename, verbose=False):
                     args.crop_height // 2
                 ))
 
+            # Shape = (frame_amount, width, height, )
             return np.array(sequence)
 
         frame_idx += 1
@@ -193,9 +193,11 @@ if __name__ == '__main__':
                 filter(lambda x: x != ".DS_Store", files)))
 
             for filename in tqdm(filenames, desc='Files ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
+            # for filename in filenames:
                 src_path = os.path.join(f'{args.video_direc}/{folder}', filename + ".mp4")
                 dst_path = os.path.join(f'{args.save_direc}/{folder}', filename + ".npz")
 
+                # utils.check_video_length(src_path, verbose=True)
                 sequence = detect_face(src_path, verbose=False)
                 
                 assert sequence is not None, f'Cannot crop from {src_path}.'
@@ -203,5 +205,5 @@ if __name__ == '__main__':
                 # ... = Ellipsis
                 data = transform.convert_bgr2gray(
                     sequence) if args.convert_gray else sequence[..., ::-1]
-                
+
                 utils.save2npz(dst_path, data=data)
