@@ -7,6 +7,7 @@ import collections as col
 import argparse
 from imutils.face_utils.helpers import FACIAL_LANDMARKS_IDXS
 from imutils.face_utils.helpers import shape_to_np
+import config
 
 from utils import utils, transform
 
@@ -38,8 +39,8 @@ def detect_face(filename, verbose=False):
 
     # Load the detector for detecting the face
     detector = dlib.get_frontal_face_detector()
-    predictor = dlib.shape_predictor(args.predictor)
-    mean_face = np.load(args.mean_face)
+    predictor = dlib.shape_predictor(config.PREDICTOR)
+    mean_face = np.load(config.MEAN_FACE)
 
     while True:
         try:
@@ -71,33 +72,33 @@ def detect_face(filename, verbose=False):
         q_frame.append(frame)
         # print(len(q_landmarks), len(q_frame))
 
-        if len(q_frame) == args.window_margin:
+        if len(q_frame) == config.WINDOW_MARGIN:
             smoothed_landmarks = np.mean(q_landmarks, axis=0)
             cur_landmarks = q_landmarks.popleft()
             cur_frame = q_frame.popleft()
             # print(q_landmarks, smoothed_landmarks)
             # After transformation
             trans_frame, tform = transform.warp_img(
-                smoothed_landmarks[args.stablePntsIDs, :],
-                mean_face[args.stablePntsIDs, :],
+                smoothed_landmarks[config.STABLE_PNTS_IDS, :],
+                mean_face[config.STABLE_PNTS_IDS, :],
                 cur_frame,
-                args.std_size)
+                config.STD_SIZE)
 
             trans_landmarks = tform(cur_landmarks)
             # print(trans_frame, tform, trans_landmarks)
             # Crop mouth patch
             sequence.append(transform.crop_patch(
                 trans_frame,
-                trans_landmarks[args.start_idx:args.end_idx],
-                args.crop_width // 2,
-                args.crop_height // 2
+                trans_landmarks[config.START_IDX:config.END_IDX],
+                config.CROP_WIDTH // 2,
+                config.CROP_HEIGHT // 2
             ))
 
             # cv2.imshow("Transformed", transform.crop_patch(
             #     trans_frame,
-            #     trans_landmarks[args.start_idx:args.end_idx],
-            #     args.crop_width // 2,
-            #     args.crop_height // 2
+            #     trans_landmarks[config.START_IDX:config.END_IDX],
+            #     config.CROP_WIDTH // 2,
+            #     config.CROP_HEIGHT // 2
             # ))
             # cv2.waitKey(int(1 / 60 * 1000))
 
@@ -106,15 +107,15 @@ def detect_face(filename, verbose=False):
                 cur_frame = q_frame.popleft()
                 # Transform frame
                 trans_frame = transform.apply_transform(
-                    tform, cur_frame, args.std_size)
+                    tform, cur_frame, config.STD_SIZE)
                 # Transform landmarks
                 trans_landmarks = tform(q_landmarks.popleft())
                 # Crop mouth patch
                 sequence.append(transform.crop_patch(
                     trans_frame,
-                    trans_landmarks[args.start_idx:args.end_idx],
-                    args.crop_width // 2,
-                    args.crop_height // 2
+                    trans_landmarks[config.START_IDX:config.END_IDX],
+                    config.CROP_WIDTH // 2,
+                    config.CROP_HEIGHT // 2
                 ))
 
             # Shape = (frame_amount, width, height, )
@@ -125,85 +126,47 @@ def detect_face(filename, verbose=False):
     return None
 
 
-def landmarks_interpolation(landmarks):
-    valid_frames_idx = [idx for idx, _ in enumerate(landmarks) if _ is not None]
-
-    if not valid_frames_idx:
-        return None
-
-    for idx in range(1, len(valid_frames_idx)):
-        # Check if frames are continuous
-        if valid_frames_idx[idx] - valid_frames_idx[idx-1] == 1:
-            continue
-        else:
-            # Interpolate missed frame
-            landmarks = transform.linear_interpolation(
-                landmarks, valid_frames_idx[idx-1], valid_frames_idx[idx])
-
-    valid_frames_idx = [idx for idx, _ in enumerate(landmarks) if _ is not None]
-
-    # Corner case: Keep frames at the beginning or at the end to be detected
-    if valid_frames_idx:
-        landmarks[:valid_frames_idx[0]] = [landmarks[valid_frames_idx[0]]] * valid_frames_idx[0]
-        landmarks[valid_frames_idx[-1]:] = [landmarks[valid_frames_idx[-1]]] * (len(landmarks) - valid_frames_idx[-1])
-    
-    valid_frames_idx = [idx for idx, _ in enumerate(landmarks) if _ is not None]
-
-    assert len(valid_frames_idx) == len(landmarks), "Not every frame has landmarks"
-    return landmarks
-
-
-def load_args(default_config=None):
-    parser = argparse.ArgumentParser(description='Lipreading Pre-processing')
-    args = parser.parse_args()
-    return args
-
-
-if __name__ == '__main__':
-    args = DictX({
-        "video_direc": './datasets/raw',
-        "landmark_direc": './landmarks/',
-        "predictor": "./modules/shape_predictor_68_face_landmarks_GTX.dat",
-        "save_direc": './datasets/visual_data/',
-        "mean_face": './modules/20words_mean_face.npy',
-        "std_size": (256, 256),
-        "stablePntsIDs": [33, 36, 39, 42, 45],
-        "crop_width": 96,
-        "crop_height": 96,
-        "start_idx": 48,
-        "end_idx": 68,
-        "window_margin": 12,
-        "convert_gray": False,
-        "testset_only": False
-    })
-
+def traverse_and_process():
     foldernames = []
 
-    for root, dirs, files in os.walk(args.video_direc):
+    for root, dirs, files in os.walk(config.VIDEO_DIREC):
         if len(dirs) > 0:
             foldernames = sorted(dirs)
-    
+
     for folder in tqdm(foldernames, desc='Folder', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
         # Check if dst folder exists
-        utils.create_path(f'{args.save_direc}/{folder}')
+        utils.create_path(f'{config.SAVE_DIREC}/{folder}')
 
         filenames = []
-        for root, dirs, files in os.walk(f'{args.video_direc}/{folder}'):
+        for root, dirs, files in os.walk(f'{config.VIDEO_DIREC}/{folder}'):
             filenames = sorted(file.split(".")[0] for file in list(
                 filter(lambda x: x != ".DS_Store", files)))
 
             for filename in tqdm(filenames, desc='Files ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
-            # for filename in filenames:
-                src_path = os.path.join(f'{args.video_direc}/{folder}', filename + ".mp4")
-                dst_path = os.path.join(f'{args.save_direc}/{folder}', filename + ".npz")
+                # for filename in filenames:
+                src_path = os.path.join(
+                    f'{config.VIDEO_DIREC}/{folder}', filename + ".mp4")
+                dst_path = os.path.join(
+                    f'{config.SAVE_DIREC}/{folder}', filename + ".npz")
 
                 # utils.check_video_length(src_path, verbose=True)
                 sequence = detect_face(src_path, verbose=False)
-                
+
                 assert sequence is not None, f'Cannot crop from {src_path}.'
                 # print(sequence.shape)
                 # ... = Ellipsis
                 data = transform.convert_bgr2gray(
-                    sequence) if args.convert_gray else sequence[..., ::-1]
+                    sequence) if config.CONVERT_GRAY else sequence[..., ::-1]
 
                 utils.save2npz(dst_path, data=data)
+
+
+def realtime_cropper():
+    pass
+
+
+if __name__ == '__main__':
+    if config.TRAVERSE_ALL:
+        traverse_and_process()
+    else:
+        realtime_cropper()
