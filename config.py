@@ -1,5 +1,5 @@
 # Settings
-TRAVERSE_ALL = True
+TRAVERSE_FILES = False
 
 # File paths
 VIDEO_DIREC = './datasets/raw'
@@ -9,6 +9,7 @@ PREDICTOR = "./modules/shape_predictor_68_face_landmarks_GTX.dat"
 MEAN_FACE = './modules/20words_mean_face.npy'
 
 # Cropping parameters
+FRAME_AMOUNT = 120
 CONVERT_GRAY = False
 STD_SIZE = (256, 256)
 STABLE_PNTS_IDS = [33, 36, 39, 42, 45]
