@@ -5,6 +5,7 @@ from tqdm import tqdm
 import numpy as np
 import collections as col
 from imutils.face_utils.helpers import shape_to_np
+from vidaug import augmentors as va
 from utils import utils, transform
 import config
 
@@ -86,6 +87,18 @@ def detect_face_from_file(filename, verbose=False):
 
 
 def traverse_and_process():
+    # For data augmentation
+    # Used to apply augmentor with 50% probability
+    sometimes = lambda aug: va.Sometimes(0.5, aug)
+    seq = va.Sequential([
+        # Randomly crop video with a size of (96 x 96)
+        va.RandomCrop(size=(96, 96)),
+        # Randomly rotates the video with a degree randomly choosen from [-10, 10]
+        va.RandomRotate(degrees=10),
+        # horizontally flip the video with 50% probability
+        sometimes(va.HorizontalFlip())
+    ])
+
     foldernames = []
 
     for root, dirs, files in os.walk(config.VIDEO_DIREC):
@@ -93,31 +106,33 @@ def traverse_and_process():
             foldernames = sorted(dirs)
 
     for folder in tqdm(foldernames, desc='Folder', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
-        # Check if dst folder exists
-        utils.create_path(f'{config.SAVE_DIREC}/{folder}')
 
         filenames = []
         for root, dirs, files in os.walk(f'{config.VIDEO_DIREC}/{folder}'):
             filenames = sorted(file.split(".")[0] for file in list(
                 filter(lambda x: x != ".DS_Store", files)))
 
-            for filename in tqdm(filenames, desc='Files ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
+            for filename in tqdm(filenames[:20], desc='Class ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
                 # for filename in filenames:
-                src_path = os.path.join(
-                    f'{config.VIDEO_DIREC}/{folder}', filename + ".mp4")
-                dst_path = os.path.join(
-                    f'{config.SAVE_DIREC}/{folder}', filename + ".npz")
+                for iter in tqdm(range(10), desc='Files ', bar_format='{l_bar}{bar:40}{r_bar}{bar:-10b}'):
+                    # Check if dst folder exists
+                    utils.create_path(f'{config.CROPPED_DIREC}/{(int(folder) - 1)}{iter}')
+                    # Set the paths
+                    src_path = f'{config.VIDEO_DIREC}/{folder}/{filename}.mp4'
+                    dst_path = f'{config.CROPPED_DIREC}/{(int(folder) - 1)}{iter}/{filename}.npz'
 
-                # utils.check_video_length(src_path, verbose=True)
-                sequence = detect_face_from_file(src_path, verbose=False)
+                    # utils.check_video_length(src_path, verbose=True)
+                    sequence = detect_face_from_file(src_path, verbose=False)
+                    # print(type(sequence), sequence.shape)
+                    if config.AUGMENT and iter != 0:
+                        sequence = np.array(seq(sequence))
+                    assert sequence is not None, f'Cannot crop from {src_path}.'
+                    # print(sequence.shape)
+                    # ... = Ellipsis
+                    data = transform.convert_bgr2gray(
+                        sequence) if config.CONVERT_GRAY else sequence[..., ::-1]
 
-                assert sequence is not None, f'Cannot crop from {src_path}.'
-                # print(sequence.shape)
-                # ... = Ellipsis
-                data = transform.convert_bgr2gray(
-                    sequence) if config.CONVERT_GRAY else sequence[..., ::-1]
-
-                utils.save2npz(dst_path, data=data)
+                    utils.save2npz(dst_path, data=data)
 
 
 def realtime_cropper():

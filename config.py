@@ -1,10 +1,11 @@
 # Settings
-TRAVERSE_FILES = False
+TRAVERSE_FILES = True
+AUGMENT = True
 
 # File paths
 VIDEO_DIREC = './datasets/raw'
-SAVE_DIREC = './datasets/visual_data/'
-LANDMARK_DIREC = './landmarks/'
+CROPPED_DIREC = './datasets/visual_data'
+AUGMENTED_DIREC = './datasets/augmented'
 PREDICTOR = "./modules/shape_predictor_68_face_landmarks_GTX.dat"
 MEAN_FACE = './modules/20words_mean_face.npy'
 
